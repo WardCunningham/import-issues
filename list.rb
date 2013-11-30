@@ -80,9 +80,11 @@ def page title
   create title
   yield
   page = {'title' => title, 'story' => @story, 'journal' => @journal}
-  File.open("repo/#{@@repo}/pages/#{slug(title)}", 'w') do |file|
+  path = "repo/#{@@repo}/pages/#{slug(title)}"
+  File.open(path, 'w') do |file|
     file.write JSON.pretty_generate(page)
   end
+  File.utime Time.at(@@date), Time.at(@@date), path
 end
 
 
