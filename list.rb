@@ -3,9 +3,6 @@ require 'json'
 require 'time'
 require 'pp'
 
-@@repo = 'wiki'
-@@date = Time.now.to_i*1000
-
 
 # wiki utilities
 
@@ -30,7 +27,9 @@ def domain text
 end
 
 def titalize text
-  excluded = %w(the and in of for at to)
+  excluded = %w(the this that if and or not may any all in of by for at to be)
+  text.capitalize!
+  text.gsub! /[\[\]]/, ''
   text.gsub(/[\w']+/m) do |word|
       excluded.include?(word) ? word : word.capitalize
   end
@@ -93,14 +92,14 @@ def fetch resource, path
   puts "fetch #{path}"
   return if File.exist? path
   puts "fetching #{resource}"
-  puts `curl -i -s https://api.github.com/repos/WardCunningham/#{@@repo}/#{resource} > #{path}`
+  puts `curl -i -s https://api.github.com/repos/WardCunningham/#{resource} > #{path}`
   puts `grep 'X-RateLimit-Remaining:' #{path}`
 end
 
 def comments issue
   return if issue['comments'] == 0
   path = "repo/#{@@repo}/comments-#{issue['number']}"
-  fetch "issues/#{issue['number']}/comments", path
+  fetch "#{@@repo}/issues/#{issue['number']}/comments", path
   head, json =  File.read(path).split(/\r\n\r\n/m)
   body = JSON.parse json
   body.each do |comment|
@@ -111,23 +110,57 @@ def comments issue
   end
 end
 
-def issue filename
-  puts filename
-  head, json =  File.read(filename).split(/\r\n\r\n/m)
+def issues path
+  puts "issues #{path}"
+  head, json =  File.read(path).split(/\r\n\r\n/m)
   body = JSON.parse json
+  result = []
   body.each do |issue|
     next if issue['pull_request']['patch_url']
     @@date = Time.parse(issue['created_at']).to_i * 1000
     puts "##{issue['number']} #{issue['title']}"
-    page titalize issue['title'] do
+    title = titalize issue['title']
+    result << "[[#{title}]]<br>##{issue['number']} by #{issue['user']['login']} with #{issue['comments']} comments"
+    page title do
       pagefold "#{issue['state']} issue ##{issue['number']} by #{issue['user']['login']}"
       markdown issue['body']
       paragraph "See issue in [#{issue['html_url']} github]"
       comments issue
     end
   end
+  result
 end
 
+def summary path, open, closed
+  puts "summary #{path}"
+  head, json =  File.read(path).split(/\r\n\r\n/m)
+  body = JSON.parse json
+  @@date = Time.parse(body['pushed_at']).to_i * 1000
+  page titalize "#{body['name']} Issues" do
+    paragraph "#{body['description']} [#{body['html_url']}/issues github]"
+    paragraph "<h3> Open Issues" if open.length
+    open.each {|issue| paragraph issue}
+    paragraph "<h3> Closed Issues" if closed.length
+    closed.each {|issue| paragraph issue}
+  end
+end
 
-issue "repo/#{@@repo}/issues-open"
-issue "repo/#{@@repo}/issues-closed"
+def repository name
+  @@repo = name
+  @@date = Time.now.to_i*1000
+
+  puts "repo #{@@repo}"
+
+  fetch "#{@@repo}/issues?state=open", "repo/#{@@repo}/issues-open"
+  open = issues "repo/#{@@repo}/issues-open"
+
+  fetch "#{@@repo}/issues?state=closed", "repo/#{@@repo}/issues-closed"
+  closed = issues "repo/#{@@repo}/issues-closed"
+
+  fetch "#{@@repo}", "repo/#{@@repo}/repo"
+  summary "repo/#{@@repo}/repo", open, closed
+end
+
+repository 'wiki'
+repository 'wiki-client'
+repository 'smallest-federated-wiki'
