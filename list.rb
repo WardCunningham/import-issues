@@ -39,12 +39,12 @@ end
 # journal actions
 
 def create title
-  @journal << {'type' => 'create', 'id' => random, 'item' => {'title' => title}, 'date' => @@date}
+  @journal << {'type' => 'create', 'id' => random, 'item' => {'title' => title}, 'date' => @@date*1000}
 end
 
 def add item
   @story << item
-  @journal << {'type' => 'add', 'id' => item['id'], 'item' => item, 'date' => @@date}
+  @journal << {'type' => 'add', 'id' => item['id'], 'item' => item, 'date' => @@date*1000}
 end
 
 
@@ -103,7 +103,7 @@ def comments issue
   head, json =  File.read(path).split(/\r\n\r\n/m)
   body = JSON.parse json
   body.each do |comment|
-    @@date = Time.parse(comment['created_at']).to_i * 1000
+    @@date = Time.parse(comment['created_at']).to_i
     pagefold comment['user']['login'], comment['id'].to_s
     markdown comment['body']
     puts "#{comment['created_at']} #{comment['id']} #{comment['user']['login']}"
@@ -117,7 +117,7 @@ def issues path
   result = []
   body.each do |issue|
     next if issue['pull_request']['patch_url']
-    @@date = Time.parse(issue['created_at']).to_i * 1000
+    @@date = Time.parse(issue['created_at']).to_i
     puts "##{issue['number']} #{issue['title']}"
     title = titalize issue['title']
     result << "[[#{title}]]<br>##{issue['number']} by #{issue['user']['login']} with #{issue['comments']} comments"
@@ -135,7 +135,7 @@ def summary path, open, closed
   puts "summary #{path}"
   head, json =  File.read(path).split(/\r\n\r\n/m)
   body = JSON.parse json
-  @@date = Time.parse(body['pushed_at']).to_i * 1000
+  @@date = Time.parse(body['pushed_at']).to_i
   page titalize "#{body['name']} Issues" do
     paragraph "#{body['description']} [#{body['html_url']}/issues github]"
     paragraph "<h3> Open Issues" if open.length
@@ -147,7 +147,7 @@ end
 
 def repository name
   @@repo = name
-  @@date = Time.now.to_i*1000
+  @@date = Time.now.to_i
 
   puts "repo #{@@repo}"
 
