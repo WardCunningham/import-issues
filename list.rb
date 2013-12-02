@@ -94,7 +94,7 @@ def fetch resource, path
   puts "fetch #{path}"
   return if File.exist? path
   puts "fetching #{resource}"
-  puts `curl -i -s https://api.github.com/repos/WardCunningham/#{resource} > #{path}`
+  puts `curl -i -s 'https://api.github.com/repos/WardCunningham/#{resource}' > #{path}`
   puts `grep 'X-RateLimit-Remaining:' #{path}`
 end
 
@@ -153,10 +153,10 @@ def repository name
 
   puts "repo #{@@repo}"
 
-  fetch "#{@@repo}/issues?state=open", "repo/#{@@repo}/issues-open"
+  fetch "#{@@repo}/issues?state=open&per_page=100", "repo/#{@@repo}/issues-open"
   open = issues "repo/#{@@repo}/issues-open"
 
-  fetch "#{@@repo}/issues?state=closed", "repo/#{@@repo}/issues-closed"
+  fetch "#{@@repo}/issues?state=closed&per_page=100", "repo/#{@@repo}/issues-closed"
   closed = issues "repo/#{@@repo}/issues-closed"
 
   fetch "#{@@repo}", "repo/#{@@repo}/repo"
